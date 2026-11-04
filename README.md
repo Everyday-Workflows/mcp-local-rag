@@ -359,6 +359,47 @@ Results keep their original order if the command fails, times out, or returns ou
 not match the schema.
 
 </details>
+<details>
+<summary>Remote Embeddings, Reranking and Read-Only Mode (OpenRouter fork)</summary>
+
+This fork can embed through OpenRouter's `/embeddings` API instead of the local model. Every
+chunk of every indexed document is sent to OpenRouter and the selected model provider, so use
+it only for content you are allowed to send there. The CLI and MCP server choose the provider
+from the same variables, so set them identically for both.
+
+| Variable | Default | Description |
+|---|---|---|
+| `EMBEDDING_PROVIDER` | `local` | `local` (Transformers.js) or `openrouter` |
+| `OPENROUTER_EMBEDDING_MODEL` | (required) | OpenRouter embedding model id, e.g. `perplexity/pplx-embed-v1-4b` |
+| `OPENROUTER_API_KEY_FILE` | (unset) | Path to a file holding the API key; preferred, keeps the key out of MCP config |
+| `OPENROUTER_API_KEY` | (unset) | API key, used only when no key file is set |
+| `OPENROUTER_DATA_COLLECTION` | `deny` | OpenRouter `provider.data_collection`: `deny` routes only to providers that do not store or train on inputs; `allow` widens routing |
+| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | API base URL |
+| `OPENROUTER_EMBEDDING_BATCH_SIZE` | `64` | Texts per request |
+| `OPENROUTER_EMBEDDING_CONCURRENCY` | `4` | Requests in flight at once within a file |
+| `OPENROUTER_EMBEDDING_TOKEN_LIMIT` | `8192` | Input token cap used to size chunks |
+| `RAG_READ_ONLY` | `false` | `true` lists only `query_documents`, `read_chunk_neighbors`, `list_files`, `status` and `sync_status`, and refuses `ingest_file`, `ingest_data`, `delete_file` and `sync_start`; update the index with the CLI |
+
+Requests retry rate limits and server errors with backoff (60 s timeout, 5 retries). Vectors
+are L2-normalized to match the `dot` distance the store uses. Vectors from different models are
+not comparable: after changing the model, use a fresh `DB_PATH` and ingest again.
+
+`sync` processes files one at a time, so a first index of many small files is slow (about 1.5 s
+per file); later syncs only embed new or changed files.
+
+For reranking, point `RAG_RERANK_CMD` at the bundled OpenRouter `/rerank` client. It reads the
+same key and base-URL variables, plus a required `OPENROUTER_RERANK_MODEL`:
+
+```json
+{
+  "env": {
+    "OPENROUTER_RERANK_MODEL": "qwen/qwen3-reranker-8b",
+    "RAG_RERANK_CMD": "/usr/bin/node /path/to/mcp-local-rag/dist/rerank/openrouter-cli.js --query {query} --top {top}"
+  }
+}
+```
+
+</details>
 
 <details>
 <summary>PDF Figures and Stored Images</summary>
