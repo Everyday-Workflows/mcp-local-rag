@@ -1,7 +1,9 @@
 // Shared CLI component helpers — factory functions for VectorStore and Embedder
 // plus base-directory resolution shared by every subcommand that scans files.
 
-import { Embedder } from '../embedder/index.js'
+import type { EmbedderConfig } from '../embedder/index.js'
+import { createTextEmbedder } from '../embedder/provider.js'
+import type { TextEmbedder } from '../embedder/types.js'
 import {
   type BaseDirsConfig,
   type BaseDirsConfigWarning,
@@ -63,11 +65,12 @@ export function createVectorStore(config: ResolvedGlobalConfig): VectorStore {
 }
 
 /**
- * Create an uninitialized Embedder from resolved global config.
- * Callers are responsible for managing the Embedder lifecycle.
+ * Create an uninitialized embedder from resolved global config: the remote
+ * OpenRouter embedder when `EMBEDDING_PROVIDER=openrouter`, else the local one.
+ * Callers are responsible for managing the embedder lifecycle.
  */
-export function createEmbedder(config: ResolvedGlobalConfig): Embedder {
-  const embedderConfig: ConstructorParameters<typeof Embedder>[0] = {
+export function createEmbedder(config: ResolvedGlobalConfig): TextEmbedder {
+  const embedderConfig: EmbedderConfig = {
     modelPath: config.modelName,
     batchSize: 16,
     cacheDir: config.cacheDir,
@@ -94,7 +97,7 @@ export function createEmbedder(config: ResolvedGlobalConfig): Embedder {
   if (headingPrefix.value) {
     embedderConfig.headingPrefix = true
   }
-  return new Embedder(embedderConfig)
+  return createTextEmbedder(embedderConfig)
 }
 
 /**

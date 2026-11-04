@@ -22,6 +22,7 @@ import {
   type ModelPrompts,
   resolveModelSettings,
 } from './sentence-transformers-config.js'
+import type { TextEmbedder } from './types.js'
 
 // ============================================
 // Type Definitions
@@ -364,7 +365,7 @@ export class EmbeddingError extends AppError {
 // ============================================
 
 /** Transformers.js wrapper: lazily loaded model, batched embedding. */
-export class Embedder {
+export class Embedder implements TextEmbedder {
   // Using unknown to avoid TS2590 (union type too complex with @types/jsdom)
   private model: unknown = null
   private initPromise: Promise<void> | null = null

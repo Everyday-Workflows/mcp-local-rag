@@ -20,7 +20,9 @@ import {
   DocumentEmbeddingSession,
   removeEmbeddingSnapshot,
 } from '../embedder/embedding-snapshot.js'
-import { Embedder } from '../embedder/index.js'
+import type { EmbedderConfig } from '../embedder/index.js'
+import { createTextEmbedder } from '../embedder/provider.js'
+import type { TextEmbedder } from '../embedder/types.js'
 import { listDocuments } from '../features/list.js'
 import {
   formatSyncError,
@@ -239,7 +241,7 @@ function supportsEmbeddedImages(filePath: string): boolean {
 export class RAGServer {
   private readonly server: Server
   private readonly vectorStore: VectorStore
-  private readonly embedder: Embedder
+  private readonly embedder: TextEmbedder
   private readonly chunker: SemanticChunker
   private readonly parser: DocumentParser
   private readonly dbPath: string
@@ -341,7 +343,7 @@ export class RAGServer {
       vectorStoreConfig.maxFiles = config.maxFiles
     }
     this.vectorStore = new VectorStore(vectorStoreConfig)
-    const embedderConfig: ConstructorParameters<typeof Embedder>[0] = {
+    const embedderConfig: EmbedderConfig = {
       modelPath: config.modelName,
       batchSize: 16,
       cacheDir: config.cacheDir,
@@ -356,7 +358,7 @@ export class RAGServer {
       embedderConfig.titlePrefix = true
     }
     embedderConfig.headingPrefix = config.headingPrefix === true
-    this.embedder = new Embedder(embedderConfig)
+    this.embedder = createTextEmbedder(embedderConfig)
     this.chunker = new SemanticChunker(
       config.chunkMinLength !== undefined ? { minChunkLength: config.chunkMinLength } : {}
     )

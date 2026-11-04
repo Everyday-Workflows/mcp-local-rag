@@ -13,7 +13,7 @@ import { resolve } from 'node:path'
 
 import { SemanticChunker } from '../chunker/index.js'
 import { removeEmbeddingSnapshot } from '../embedder/embedding-snapshot.js'
-import type { Embedder } from '../embedder/index.js'
+import type { TextEmbedder } from '../embedder/types.js'
 import {
   formatSyncError,
   runSync as runSyncCore,
@@ -240,8 +240,8 @@ export async function runSync(args: string[], globalOptions: GlobalOptions = {})
 
   // Built on the first upsert only: a run with nothing to ingest must not pay
   // for the embedding model.
-  let embedder: Embedder | undefined
-  const ensureEmbedder = (): Embedder => {
+  let embedder: TextEmbedder | undefined
+  const ensureEmbedder = (): TextEmbedder => {
     embedder ??= createEmbedder(globalConfig)
     return embedder
   }
