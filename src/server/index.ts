@@ -279,6 +279,8 @@ export class RAGServer {
   /** Configured reranker command. Undefined leaves query_documents unchanged. */
   private readonly rerankCommand: string | undefined
   private readonly rerankTimeoutMs: number
+  /** Hide and refuse index-changing tools (`RAG_READ_ONLY`). */
+  private readonly readOnly: boolean
   /**
    * The one current-or-latest sync job this process retains. A new `sync_start`
    * replaces a terminal record, so the older id becomes unknown; there is no
@@ -313,6 +315,7 @@ export class RAGServer {
     this.storeImages = config.storeImages ?? false
     this.rerankCommand = config.rerankCommand
     this.rerankTimeoutMs = config.rerankTimeoutMs ?? DEFAULT_RERANK_TIMEOUT_MS
+    this.readOnly = config.readOnly === true
     this.scanExclusion = buildScanExclusion({
       dbPath: this.dbPath,
       cacheDir: this.cacheDir,
@@ -418,12 +421,29 @@ export class RAGServer {
   }
 
   /**
+   * Gate for an index-changing tool: a refusal in read-only mode or while
+   * another write runs, else `null` with the mutation guard held.
+   */
+  private admitMutation(
+    toolName: string
+  ): { content: RagTextContentBlock[]; isError: true } | null {
+    if (!this.readOnly) {
+      return this.acquireMutation()
+    }
+    const text = `${toolName} is disabled: this server runs with RAG_READ_ONLY=true. Update the index with the CLI instead.`
+    return { content: this.withWarnings([{ type: 'text', text }]), isError: true }
+  }
+
+  /**
    * Set up MCP handlers
    */
   private setupHandlers(): void {
     // Tool list
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: toolDefinitions,
+      // Read-only mode hides index-changing tools so clients never offer them.
+      tools: this.readOnly
+        ? toolDefinitions.filter((tool) => !MUTATION_TOOLS.has(tool.name))
+        : toolDefinitions,
     }))
 
     // The handlers carry no error mapping: every error reaches the single catch
@@ -438,9 +458,9 @@ export class RAGServer {
         // an internal call such as `handleIngestData` -> `handleIngestFile`
         // cannot reacquire it and self-deadlock.
         if (MUTATION_TOOLS.has(toolName)) {
-          const overlap = this.acquireMutation()
-          if (overlap !== null) {
-            return overlap
+          const refusal = this.admitMutation(toolName)
+          if (refusal !== null) {
+            return refusal
           }
         }
         // `sync_start` hands the guard to the job it schedules, which releases

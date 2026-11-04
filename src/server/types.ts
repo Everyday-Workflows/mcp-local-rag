@@ -44,6 +44,8 @@ interface RAGServerConfigBase {
   rerankCommand?: string
   /** Per-rerank-call budget in milliseconds (default: 10000). */
   rerankTimeoutMs?: number
+  /** Hide and refuse index-changing tools: ingest, delete, sync (default: false). */
+  readOnly?: boolean
   /**
    * Normal-path roots, index-aligned with the realpath'd `baseDirs` boundary,
    * used for user-facing scan and display so paths match the stored DB keys.

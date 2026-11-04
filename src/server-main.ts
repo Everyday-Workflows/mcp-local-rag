@@ -196,6 +196,7 @@ function applyOptionalSettings(config: ServerConfig, env: NodeJS.ProcessEnv): st
   const headingPrefix = parseBooleanEnv('EMBED_HEADING_PREFIX', env['EMBED_HEADING_PREFIX'])
   const rerankCommand = parseRerankCmd(env['RAG_RERANK_CMD'])
   const rerankTimeoutMs = parseRerankTimeoutMs(env['RAG_RERANK_TIMEOUT_MS'])
+  const readOnly = parseBooleanEnv('RAG_READ_ONLY', env['RAG_READ_ONLY'])
 
   if (maxDistance.value !== undefined) {
     config.maxDistance = maxDistance.value
@@ -219,6 +220,7 @@ function applyOptionalSettings(config: ServerConfig, env: NodeJS.ProcessEnv): st
   config.titlePrefix = titlePrefix.value
   config.headingPrefix = headingPrefix.value
   config.rerankTimeoutMs = rerankTimeoutMs.value ?? DEFAULT_RERANK_TIMEOUT_MS
+  config.readOnly = readOnly.value
 
   return [
     maxDistance,
@@ -231,6 +233,7 @@ function applyOptionalSettings(config: ServerConfig, env: NodeJS.ProcessEnv): st
     headingPrefix,
     rerankCommand,
     rerankTimeoutMs,
+    readOnly,
   ]
     .map((parsed) => parsed.warning)
     .filter((warning): warning is string => warning !== undefined)
